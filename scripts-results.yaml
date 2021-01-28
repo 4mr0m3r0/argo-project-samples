@@ -7,14 +7,22 @@ spec:
   templates:
   - name: bash-script-example
     steps:
-    - - name: generate
+    - - name: generate-A
         template: gen-random-int-bash
-    - - name: print
+    - - name: print-A
         template: print-message
         arguments:
           parameters:
           - name: message
-            value: "{{steps.generate.outputs.result}}"
+            value: "{{steps.generate-A.outputs.result}}"
+    - - name: print-B
+        template: gen-random-int-python
+    - - name: print-B
+        template: print-message
+        arguments:
+          parameters:
+          - name: message
+            value: "{{steps.generate-B.outputs.result}}"
     
   - name: gen-random-int-bash
     script:

@@ -15,7 +15,7 @@ spec:
           parameters:
           - name: message
             value: "{{steps.generate-A.outputs.result}}"
-    - - name: print-B
+    - - name: generate-B
         template: gen-random-int-python
     - - name: print-B
         template: print-message

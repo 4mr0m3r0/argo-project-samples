@@ -23,14 +23,14 @@ spec:
           parameters:
           - name: message
             value: "{{steps.generate-B.outputs.result}}"
-    
+
   - name: gen-random-int-bash
     script:
       image: debian:9.4
       command: [bash]
       source: |
         cat /dev/urandom | od -N2 -An -i | awk -v f=1 -v r=100 '{printf "%i\n", f + r * $1 / 65536}'
-  
+
   - name: gen-random-int-python
     script:
       image: python:alpine3.6
@@ -39,15 +39,15 @@ spec:
         import random
         i = random.randint(1, 100)
         print(i)
-  
+
   - name: gen-random-int-javascript
-    script: 
+    script:
       image: node:9.1-alpine
       command: [node]
       source: |
         var rand = Math.floor(Math.random() * 100);
         console.log(rand);
-  
+
   - name: print-message
     inputs:
       parameters:

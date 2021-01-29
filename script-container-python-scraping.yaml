@@ -50,7 +50,7 @@ spec:
           if dict:
             for item in dict['items']:
               repo_list.append(item['full_name'])
-          print(repo_list)
+          print(json.dumps(repo_list))
 
   - name: print-message
     inputs:

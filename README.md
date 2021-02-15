@@ -1,5 +1,5 @@
 # Argo Wokflow Samples
-These is a repository for learning Argo Workflow.
+This is a repository for studying and practicing Argo Workflow.
 
 Go to the main website examples:
     * https://argoproj.github.io/argo/examples/

@@ -1,0 +1,281 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: dag-artifact-artifactory-
+spec:
+  entrypoint: get-repo-info
+  templates:
+    - name: get-repo-info
+      dag:
+        tasks:
+          - name: project-Jetbrains
+            template: get-repos
+            arguments:
+              parameters:
+              - name: company
+                value: "jetbrains"
+          - name: project-Google
+            template: get-repos
+            arguments:
+              parameters:
+              - name: company
+                value: "google"
+          - name: project-Airbnb
+            template: get-repos
+            arguments:
+              parameters:
+              - name: company
+                value: "airbnb"
+          - name: project-Spotify
+            template: get-repos
+            arguments:
+              parameters:
+              - name: company
+                value: "spotify"
+
+          - name: execute-Jetbrains
+            dependencies: [project-Jetbrains]
+            template: artifact-generator
+            arguments:
+              parameters:
+              - name: name
+                value: "{{item.name}}"
+              - name: url
+                value: "{{item.url}}"
+              - name: stars
+                value: "{{item.stars}}"
+              - name: language
+                value: "{{item.language}}"
+            withParam: "{{tasks.project-Jetbrains.outputs.result}}"
+          - name: execute-Google
+            dependencies: [project-Google]
+            template: artifact-generator
+            arguments:
+              parameters:
+              - name: name
+                value: "{{item.name}}"
+              - name: url
+                value: "{{item.url}}"
+              - name: stars
+                value: "{{item.stars}}"
+              - name: language
+                value: "{{item.language}}"
+            withParam: "{{tasks.project-Google.outputs.result}}"
+          - name: execute-Airbnb
+            dependencies: [project-Airbnb]
+            template: artifact-generator
+            arguments:
+              parameters:
+              - name: name
+                value: "{{item.name}}"
+              - name: url
+                value: "{{item.url}}"
+              - name: stars
+                value: "{{item.stars}}"
+              - name: language
+                value: "{{item.language}}"
+            withParam: "{{tasks.project-Airbnb.outputs.result}}"
+          - name: execute-Spotify
+            dependencies: [project-Spotify]
+            template: artifact-generator
+            arguments:
+              parameters:
+              - name: name
+                value: "{{item.name}}"
+              - name: url
+                value: "{{item.url}}"
+              - name: stars
+                value: "{{item.stars}}"
+              - name: language
+                value: "{{item.language}}"
+            withParam: "{{tasks.project-Spotify.outputs.result}}"
+
+    - name: get-repos
+      inputs:
+        parameters:
+        - name: company
+      script:
+        image: python:3.9.1-alpine
+        command: [python]
+        source: |
+          import json
+          import urllib.request
+          import ssl
+          repo_list = []
+          ctx = ssl.create_default_context()
+          ctx.check_hostname = False
+          ctx.verify_mode = ssl.CERT_NONE
+          request = urllib.request.Request(url="https://api.github.com/orgs/{{inputs.parameters.company}}/repos")
+          with urllib.request.urlopen(request, context=ctx) as response:
+            response_content = response.read()
+            response_content.decode('utf-8')
+            dict = json.loads(response_content)
+            repo_list = []
+            if dict:
+              item_number = 0
+              for item in dict:
+                if item_number = 2:
+                  break
+                repo_list.append({'name':item['full_name'], 'url':item['svn_url'], 'stars':item['stargazers_count'], 'language':item['language']})
+                item_number += 1
+            print(json.dumps(repo_list))
+
+
+    - name: artifact-generator
+      inputs:
+        parameters:
+        - name: name
+        - name: url
+        - name: stars
+        - name: language
+      steps:
+        - - name: execute-python-language
+            template: python-artifact
+            arguments:
+              parameters:
+              - name: name
+                value: "{{inputs.parameters.name}}"
+              - name: url
+                value: "{{inputs.parameters.url}}"
+              - name: stars
+                value: "{{inputs.parameters.stars}}"
+              - name: language
+                value: "{{inputs.parameters.language}}"
+            when: "{{inputs.parameters.language}} == Python"
+        - - name: execute-golang-language
+            template: golang-artifact
+            arguments:
+              parameters:
+              - name: name
+                value: "{{inputs.parameters.name}}"
+              - name: url
+                value: "{{inputs.parameters.url}}"
+              - name: stars
+                value: "{{inputs.parameters.stars}}"
+              - name: language
+                value: "{{inputs.parameters.language}}"
+            when: "{{inputs.parameters.language}} == Go"
+        - - name: execute-ruby-language
+            template: ruby-artifact
+            arguments:
+              parameters:
+              - name: name
+                value: "{{inputs.parameters.name}}"
+              - name: url
+                value: "{{inputs.parameters.url}}"
+              - name: stars
+                value: "{{inputs.parameters.stars}}"
+              - name: language
+                value: "{{inputs.parameters.language}}"
+            when: "{{inputs.parameters.language}} == Ruby"
+        - - name: execute-other-laguages
+            template: other-languages
+            arguments:
+              parameters:
+              - name: name
+                value: "{{inputs.parameters.name}}"
+              - name: url
+                value: "{{inputs.parameters.url}}"
+              - name: stars
+                value: "{{inputs.parameters.stars}}"
+              - name: language
+                value: "{{inputs.parameters.language}}"
+            when: "({{inputs.parameters.language}} != Python) && ({{inputs.parameters.language}} != Go) && ({{inputs.parameters.language}} != Ruby)"
+
+    - name: golang-artifact
+      inputs:
+        parameters:
+        - name: name
+        - name: url
+        - name: stars
+        - name: language
+      script:
+        image: golang:1.16.2-alpine3.13
+        command: [go]
+        source: |
+          package main
+          import "io/ioutil"
+          func main() {
+          	name := {{inputs.parameters.name}}
+          	url := {{inputs.parameters.url}}
+          	stars := {{inputs.parameters.stars}}
+          	language := {{inputs.parameters.language}}
+          	info := "Repository " + name + " with " + stars + " stars and language " + language + " located in " + url
+          	ioutil.WriteFile("go-repository.yaml", []byte(info), 0666)
+          }
+      outputs:
+        artifacts:
+        - name: go-repository
+          path: go-repository.yaml
+
+    - name: python-artifact
+      inputs:
+        parameters:
+        - name: name
+        - name: url
+        - name: stars
+        - name: language
+      script:
+        image: python:3.9.2-alpine3.12
+        command: [python]
+        source: |
+          def write_file(filename):
+              name = {{inputs.parameters.name}}
+              url = {{inputs.parameters.url}}
+              stars = {{inputs.parameters.stars}}
+              language = {{inputs.parameters.language}}
+              info = f'Repository {name} with {stars} stars and language {language} located in {url}'
+              file_writer = open(filename, "a")
+              file_writer.write(info)
+              file_writer.close()
+          if __name__ == '__main__':
+              write_file("python-repository.yaml")
+      outputs:
+        artifacts:
+        - name: python-repository
+          path: python-repository.yaml
+
+    - name: ruby-artifact
+      inputs:
+        parameters:
+        - name: name
+        - name: url
+        - name: stars
+        - name: language
+      script:
+        image: ruby:3.0.0-alpine3.13
+        command: [ruby]
+        source: |
+          def write_file(filename)
+            name = {{inputs.parameters.name}}
+            url = {{inputs.parameters.url}}
+            stars = {{inputs.parameters.stars}}
+            language = {{inputs.parameters.language}}
+            info = "Repository #{name} with #{stars} stars and language #{language} located in #{url}"
+            File.write(filename, info)
+          end
+          write_file("ruby-repository.yaml")
+      outputs:
+        artifacts:
+        - name: ruby-repository
+          path: ruby-repository.yaml
+    - name: other-languages
+      inputs:
+        parameters:
+        - name: name
+        - name: url
+        - name: language
+      container:
+        image: docker/whalesay
+        command: [cowsay]
+        args: ["Try to migrate the repo {{inputs.parameters.name}} made in {{inputs.parameters.language}} and url {{inputs.parameters.url}} to Python, Go or Ruby language."]
+
+    - name: print-message
+      inputs:
+        artifacts:
+        - name: message
+          path: /tmp/message
+      container:
+        image: alpine:latest
+        command: [sh, -c]
+        args: ["cat /tmp/message"]

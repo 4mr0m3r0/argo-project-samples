@@ -62,19 +62,19 @@ spec:
         arguments:
           parameters:
           - name: instruction
-            value: "./gradlew -Pcoverage scotiabank-go-app:testDummyDebugUnitTest"
+            value: "./gradlew -Pcoverage testDummyDebugUnitTest"
       - name: android-ui-test
         template: cowsay-sh
         arguments:
           parameters:
           - name: instruction
-            value: "./gradlew scotiabank-go-app:androidTestDummyDebugUnitTest"
+            value: "./gradlew androidTestDummyDebugUnitTest"
     - - name: jacoco-coverage
         template: cowsay-sh
         arguments:
           parameters:
           - name: instruction
-            value: "./gradlew scotiabank-go-app:testDummyDebugUnitTestCoverage"
+            value: "./gradlew testDummyDebugUnitTestCoverage"
     - - name: sonarqube-publish
         template: cowsay-sh
         arguments:

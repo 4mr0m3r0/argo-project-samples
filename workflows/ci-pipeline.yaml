@@ -49,11 +49,14 @@ spec:
           - name: instruction
             value: "./gradlew detekt"
       - name: lint-checks
-        template: cowsay-sh
+        template: android-sdk-gradle-sh
         arguments:
+          artifacts:
+          - name: source
+            from: "{{steps.checkout.outputs.artifacts.source}}"
           parameters:
           - name: instruction
-            value: "./gradlew lintDummyDebug"
+            value: "assemble"
       - name: unit-test
         template: cowsay-sh
         arguments:

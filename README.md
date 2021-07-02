@@ -1,7 +1,8 @@
-# Argo Workflow Samples
+# Argo Samples
 This is a repository for some experiments in Argo Workflow.
 
-Go first to the main website examples:
+Go first to the main website: https://argoproj.github.io/
+ArgoProj Examples:
 * https://argoproj.github.io/argo/examples/
 * https://github.com/argoproj/argo/tree/master/examples
 

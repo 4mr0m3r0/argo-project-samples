@@ -1,0 +1,66 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: android-pipeline-
+spec:
+  entrypoint: pipeline
+  templates:
+  - name: pipeline
+    steps:
+    - - name: assemble
+        template: android-sdk-gradle-sh
+        arguments:
+          parameters:
+          - name: instruction
+            value: "./gradlew assemble"
+    - - name: code-review
+        template: android-sdk-gradle-sh
+        arguments:
+          parameters:
+          - name: instruction
+            value: ""
+      - name: detekt
+        template: android-sdk-gradle-sh
+        arguments:
+          parameters:
+          - name: instruction
+            value: "./gradlew detekt"
+      - name: lint-checks
+        template: android-sdk-gradle-sh
+        arguments:
+          parameters:
+          - name: instruction
+            value: "./gradlew lintDummyDebug"
+      - name: unit-test
+        template: android-sdk-gradle-sh
+        arguments:
+          parameters:
+          - name: instruction
+            value: "./gradlew -Pcoverage scotiabank-go-app:testDummyDebugUnitTest"
+      - name: android-ui-test
+        template: android-sdk-gradle-sh
+        arguments:
+          parameters:
+          - name: instruction
+            value: "./gradlew scotiabank-go-app:androidTestDummyDebugUnitTest"
+    - - name: jacoco-coverage
+        template: android-sdk-gradle-sh
+        arguments:
+          parameters:
+          - name: instruction
+            value: "./gradlew scotiabank-go-app:testDummyDebugUnitTestCoverage"
+    - - name: sonarqube-publish
+        template: android-sdk-gradle-sh
+        arguments:
+          parameters:
+          - name: instruction
+            value: "./gradlew sonarqube -Dsonar.host.url=${SONAR_URL} -Dsonar.projectKey=${SONAR_KEY} -Dsonar.projectName=${SONAR_NAME} --stacktrace"
+
+  - name: android-sdk-gradle-sh
+    inputs:
+      parameters:
+      - name: instruction
+    container:
+      image: docker/whalesay
+      command: [cowsay]
+      args: ["The instruction is {{inputs.parameters.instruction}}"]

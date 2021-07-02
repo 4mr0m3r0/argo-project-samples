@@ -1,0 +1,139 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: android-pipeline-
+spec:
+  entrypoint: pipeline
+  arguments:
+    parameters:
+    - name: repo
+      value: https://github.com/4mr0m3r0/movies-jetpack-sample
+    - name: revision
+      value: "master"
+    - name: android-sdk-url
+      value: https://dl.google.com/android/repository/commandlinetools-linux-7302050_latest.zip
+  volumeClaimTemplates:
+  - metadata:
+      name: workdir
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 500Mi 
+  templates:
+  - name: pipeline
+    steps:
+    - - name: android-sdk
+        template: android-sdk-download
+    - - name: checkout
+        template: checkout-project
+    - - name: assemble
+        template: assemble-project
+        arguments:
+          artifacts:
+          - name: source
+            from: "{{steps.checkout.outputs.artifacts.source}}"
+    - - name: code-review
+        template: android-sdk-gradle-sh
+        arguments:
+          parameters:
+          - name: instruction
+            value: ""
+      - name: detekt
+        template: android-sdk-gradle-sh
+        arguments:
+          parameters:
+          - name: instruction
+            value: "./gradlew detekt"
+      - name: lint-checks
+        template: android-sdk-gradle-sh
+        arguments:
+          parameters:
+          - name: instruction
+            value: "./gradlew lintDummyDebug"
+      - name: unit-test
+        template: android-sdk-gradle-sh
+        arguments:
+          parameters:
+          - name: instruction
+            value: "./gradlew -Pcoverage scotiabank-go-app:testDummyDebugUnitTest"
+      - name: android-ui-test
+        template: android-sdk-gradle-sh
+        arguments:
+          parameters:
+          - name: instruction
+            value: "./gradlew scotiabank-go-app:androidTestDummyDebugUnitTest"
+    - - name: jacoco-coverage
+        template: android-sdk-gradle-sh
+        arguments:
+          parameters:
+          - name: instruction
+            value: "./gradlew scotiabank-go-app:testDummyDebugUnitTestCoverage"
+    - - name: sonarqube-publish
+        template: android-sdk-gradle-sh
+        arguments:
+          parameters:
+          - name: instruction
+            value: "./gradlew sonarqube -Dsonar.host.url=${SONAR_URL} -Dsonar.projectKey=${SONAR_KEY} -Dsonar.projectName=${SONAR_NAME} --stacktrace"
+
+  - name: android-sdk-download
+    container:
+      image: debian:stable-slim
+      command: [sh, -c]
+      args: ["apt-get --quiet update --yes &&
+      apt-get --quiet install --yes wget tar unzip lib32stdc++6 lib32z1 &&
+      wget --quiet --output-document=android-sdk.zip {{workflow.parameters.android-sdk-url}} && 
+      cp android-sdk.zip mnt/vol/ "]
+      volumeMounts:
+      - name: workdir
+        mountPath: /mnt/vol
+
+  - name: checkout-project
+    inputs:
+      artifacts:
+      - name: source
+        path: /movies-jetpack-sample
+        git:
+          repo: "{{workflow.parameters.repo}}"
+          revision: "{{workflow.parameters.revision}}"
+    outputs:
+      artifacts:
+      - name: source
+        path: /movies-jetpack-sample
+    container:
+      image: debian:stable-slim
+      command: [sh, -c]
+      args: ["ls -l movies-jetpack-sample"]
+  
+  - name: assemble-project
+    inputs:
+      artifacts:
+      - name: source
+        path: /movies-jetpack-sample
+    container:
+      image: openjdk:8-jdk
+      command: [sh, -c]
+      args: [" ls mnt/vol &&
+      cp /mnt/vol/android-sdk.zip . &&
+      apt-get --quiet update --yes &&
+      apt-get --quiet install --yes wget tar unzip lib32stdc++6 lib32z1 &&
+      unzip -d android-sdk-linux android-sdk.zip &&
+      export ANDROID_HOME=$PWD/android-sdk-linux &&
+      echo y | android-sdk-linux/cmdline-tools/bin/sdkmanager --sdk_root=${ANDROID_HOME} 'platforms;android-30' >/dev/null &&
+      echo y | android-sdk-linux/cmdline-tools/bin/sdkmanager --sdk_root=${ANDROID_HOME} 'platform-tools' >/dev/null &&
+      echo y | android-sdk-linux/cmdline-tools/bin/sdkmanager --sdk_root=${ANDROID_HOME} 'build-tools;30.0.3' >/dev/null &&
+      export PATH=$PATH:$PWD/android-sdk-linux/platform-tools/ &&
+      yes | android-sdk-linux/cmdline-tools/bin/sdkmanager --sdk_root=${ANDROID_HOME} --licenses &&
+      ls "]
+      volumeMounts:
+      - name: workdir
+        mountPath: /mnt/vol
+
+  - name: android-sdk-gradle-sh
+    inputs:
+      parameters:
+      - name: instruction
+    container:
+      image: docker/whalesay
+      command: [cowsay]
+      args: ["The instruction is {{inputs.parameters.instruction}}"]

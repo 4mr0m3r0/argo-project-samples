@@ -56,7 +56,7 @@ spec:
             from: "{{steps.checkout.outputs.artifacts.source}}"
           parameters:
           - name: instruction
-            value: "assemble"
+            value: "lint"
       - name: unit-test
         template: cowsay-sh
         arguments:

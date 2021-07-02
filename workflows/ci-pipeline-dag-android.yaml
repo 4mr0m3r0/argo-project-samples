@@ -1,0 +1,152 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: android-pipeline-
+spec:
+  entrypoint: pipeline
+  arguments:
+    parameters:
+    - name: repo
+      value: https://github.com/4mr0m3r0/movies-jetpack-sample.git
+    - name: revision
+      value: "master"
+    - name: android-sdk-url
+      value: https://dl.google.com/android/repository/commandlinetools-linux-7302050_latest.zip
+  volumeClaimTemplates:
+  - metadata:
+      name: workdir
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 700Mi
+  templates:
+  - name: pipeline
+    dag:
+      tasks:
+      - name: android-sdk
+        template: android-sdk-download
+      - name: checkout
+        dependencies: [android-sdk]
+        template: checkout-project
+      - name: assemble
+        dependencies: [checkout]
+        template: android-sdk-gradle-sh
+        arguments:
+          parameters:
+          - name: instruction
+            value: "assemble"
+      - name: code-review
+        dependencies: [checkout]
+        template: cowsay-sh
+        arguments:
+          parameters:
+          - name: instruction
+            value: ""
+      - name: detekt
+        dependencies: [checkout]
+        template: android-sdk-gradle-sh
+        arguments:
+          parameters:
+          - name: instruction
+            value: "detekt"
+      - name: lint-checks
+        dependencies: [checkout]
+        template: android-sdk-gradle-sh
+        arguments:
+          parameters:
+          - name: instruction
+            value: "lint"
+      - name: unit-test
+        dependencies: [checkout]
+        template: android-sdk-gradle-sh
+        arguments:
+          parameters:
+          - name: instruction
+            value: "scotiabank-go-app:testMockDebugUnitTest"
+      - name: android-ui-test
+        dependencies: [checkout]
+        template: cowsay-sh
+        arguments:
+          parameters:
+          - name: instruction
+            value: "./gradlew scotiabank-go-app:androidTestDummyDebugUnitTest"
+      - name: jacoco-coverage
+        dependencies: [unit-test, android-ui-test]
+        template: cowsay-sh
+        arguments:
+          parameters:
+          - name: instruction
+            value: "./gradlew scotiabank-go-app:testDummyDebugUnitTestCoverage"
+      - name: sonarqube-publish
+        dependencies: [jacoco-coverage, lint-checks, assemble]
+        template: cowsay-sh
+        arguments:
+          parameters:
+          - name: instruction
+            value: "./gradlew sonarqube -Dsonar.host.url=${SONAR_URL} -Dsonar.projectKey=${SONAR_KEY} -Dsonar.projectName=${SONAR_NAME} --stacktrace"
+
+  - name: android-sdk-download
+    container:
+      image: debian:stable-slim
+      command: [sh, -c]
+      args: ["apt-get --quiet update --yes &&
+      apt-get --quiet install --yes wget tar unzip lib32stdc++6 lib32z1 &&
+      wget --quiet --output-document=android-sdk.zip {{workflow.parameters.android-sdk-url}} && 
+      cp android-sdk.zip mnt/vol/ "]
+      volumeMounts:
+      - name: workdir
+        mountPath: /mnt/vol
+
+  - name: checkout-project
+    inputs:
+      artifacts:
+      - name: source
+        path: /mnt/vol/movies-jetpack-sample
+        git:
+          repo: "{{workflow.parameters.repo}}"
+          revision: "{{workflow.parameters.revision}}"
+    container:
+      image: debian:stable-slim
+      command: [sh, -c]
+      args: ["ls -l /mnt/vol/"]
+      volumeMounts:
+      - name: workdir
+        mountPath: /mnt/vol
+  
+  - name: android-sdk-gradle-sh
+    inputs:
+      parameters:
+      - name: instruction
+    container:
+      image: openjdk:8-jdk
+      command: [sh, -c]
+      args: [" ls mnt/vol &&
+      cp -r /mnt/vol/movies-jetpack-sample . &&
+      cp /mnt/vol/android-sdk.zip . &&
+      apt-get --quiet update --yes &&
+      apt-get --quiet install --yes wget tar unzip lib32stdc++6 lib32z1 &&
+      unzip -d android-sdk-linux android-sdk.zip &&
+      export ANDROID_HOME=$PWD/android-sdk-linux &&
+      echo y | android-sdk-linux/cmdline-tools/bin/sdkmanager --sdk_root=${ANDROID_HOME} 'platforms;android-30' >/dev/null &&
+      echo y | android-sdk-linux/cmdline-tools/bin/sdkmanager --sdk_root=${ANDROID_HOME} 'platform-tools' >/dev/null &&
+      echo y | android-sdk-linux/cmdline-tools/bin/sdkmanager --sdk_root=${ANDROID_HOME} 'build-tools;30.0.3' >/dev/null &&
+      export PATH=$PATH:$PWD/android-sdk-linux/platform-tools/ &&
+      yes | android-sdk-linux/cmdline-tools/bin/sdkmanager --sdk_root=${ANDROID_HOME} --licenses &&
+      echo '| ***************************** |' &&
+      echo '<< Starting {{inputs.parameters.instruction}} >>' &&
+      echo '| ***************************** |' &&
+      cd movies-jetpack-sample &&
+      ./gradlew {{inputs.parameters.instruction}} "]
+      volumeMounts:
+      - name: workdir
+        mountPath: /mnt/vol
+
+  - name: cowsay-sh
+    inputs:
+      parameters:
+      - name: instruction
+    container:
+      image: docker/whalesay
+      command: [cowsay]
+      args: ["Starting {{inputs.parameters.instruction}}"]

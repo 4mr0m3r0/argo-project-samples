@@ -1,5 +1,5 @@
 # Argo Samples
-This is a playground project for Argo Workflow, Argo CD, Argo Events.
+This is a playground project for Argo Workflow, CD, Events.
 
 Go first to Argo Project main website: https://argoproj.github.io/
 

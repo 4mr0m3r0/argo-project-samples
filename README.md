@@ -1,5 +1,5 @@
 # Argo Samples
-This is a repository for some experiments in Argo Workflow.
+This is a playground in Argo Workflow.
 
 Go first to Argo Project main website: https://argoproj.github.io/
 

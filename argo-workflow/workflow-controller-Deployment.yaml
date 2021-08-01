@@ -1,0 +1,49 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: workflow-controller
+spec:
+  selector:
+    matchLabels:
+      app: workflow-controller
+  template:
+    metadata:
+      labels:
+        app: workflow-controller
+    spec:
+      containers:
+      - args:
+        - --configmap
+        - workflow-controller-configmap
+        - --executor-image
+        - argoproj/argoexec:v3.0.3
+        - --namespaced
+        command:
+        - workflow-controller
+        env:
+        - name: LEADER_ELECTION_IDENTITY
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.name
+        image: argoproj/workflow-controller:v3.0.3
+        livenessProbe:
+          httpGet:
+            path: /metrics
+            port: metrics
+          initialDelaySeconds: 30
+          periodSeconds: 30
+        name: workflow-controller
+        ports:
+        - containerPort: 9090
+          name: metrics
+        securityContext:
+          capabilities:
+            drop:
+            - ALL
+      nodeSelector:
+        kubernetes.io/os: linux
+      securityContext:
+        runAsNonRoot: true
+      serviceAccountName: argo

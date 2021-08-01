@@ -1,0 +1,69 @@
+---
+apiVersion: v1
+data:
+  artifactRepository: |
+    archiveLogs: true
+    s3:
+      bucket: my-bucket
+      endpoint: minio:9000
+      insecure: true
+      accessKeySecret:
+        name: my-minio-cred
+        key: accesskey
+      secretKeySecret:
+        name: my-minio-cred
+        key: secretkey
+  containerRuntimeExecutor: docker
+  containerRuntimeExecutors: |
+    - name: k8sapi
+      selector:
+        matchLabels:
+          workflows.argoproj.io/container-runtime-executor: k8sapi
+  executor: |
+    resources:
+      requests:
+        cpu: 10m
+        memory: 64Mi
+  links: |
+    - name: Workflow Link
+      scope: workflow
+      url: http://logging-facility?namespace=${metadata.namespace}&workflowName=${metadata.name}&startedAt=${status.startedAt}&finishedAt=${status.finishedAt}
+    - name: Pod Link
+      scope: pod
+      url: http://logging-facility?namespace=${metadata.namespace}&podName=${metadata.name}&startedAt=${status.startedAt}&finishedAt=${status.finishedAt}
+    - name: Pod Logs Link
+      scope: pod-logs
+      url: http://logging-facility?namespace=${metadata.namespace}&podName=${metadata.name}&startedAt=${status.startedAt}&finishedAt=${status.finishedAt}
+    - name: Event Source Logs Link
+      scope: event-source-logs
+      url: http://logging-facility?namespace=${metadata.namespace}&podName=${metadata.name}&startedAt=${status.startedAt}&finishedAt=${status.finishedAt}
+    - name: Sensor Logs Link
+      scope: sensor-logs
+      url: http://logging-facility?namespace=${metadata.namespace}&podName=${metadata.name}&startedAt=${status.startedAt}&finishedAt=${status.finishedAt}
+  metricsConfig: |
+    disableLegacy: true
+    enabled: true
+    path: /metrics
+    port: 9090
+  persistence: |
+    connectionPool:
+      maxIdleConns: 100
+      maxOpenConns: 0
+      connMaxLifetime: 0s
+    nodeStatusOffLoad: true
+    archive: true
+    archiveTTL: 7d
+    postgresql:
+      host: postgres
+      port: 5432
+      database: postgres
+      tableName: argo_workflows
+      userNameSecret:
+        name: argo-postgres-config
+        key: username
+      passwordSecret:
+        name: argo-postgres-config
+        key: password
+kind: ConfigMap
+metadata:
+  name: workflow-controller-configmap

@@ -3,7 +3,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: sensor-controller
-  namespace: argo-events
+  namespace: android-pipeline
 spec:
   replicas: 1
   selector:

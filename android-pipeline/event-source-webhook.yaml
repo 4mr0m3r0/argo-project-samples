@@ -4,12 +4,9 @@ metadata:
   name: webhook
 spec:
   service:
-    type: LoadBalancer
     ports:
       - port: 12000
         targetPort: 12000
-        protocol: TCP
-        nodePort: 30010
   webhook:
     # event-source can run multiple HTTP servers. Simply define a unique port to start a new HTTP server
     example:
@@ -19,22 +16,3 @@ spec:
       endpoint: /example
       # HTTP request method to allow. In this case, only POST requests are accepted
       method: POST
-
-#    example-foo:
-#      port: "12000"
-#      endpoint: /example2
-#      method: POST
-
-# Uncomment to use secure webhook
-#    example-secure:
-#      port: "13000"
-#      endpoint: "/secure"
-#      method: "POST"
-#      # k8s secret that contains the cert
-#      serverCertSecret:
-#        name: my-secret
-#        key: cert-key
-#      # k8s secret that contains the private key
-#      serverKeySecret:
-#        name: my-secret
-#        key: pk-key

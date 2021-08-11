@@ -4,8 +4,8 @@ This is a playground project for Argo Workflow, CD, Events.
 Go first to Argo Project main website: https://argoproj.github.io/
 
 ArgoProj Examples:
-* https://argoproj.github.io/argo/examples/
-* https://github.com/argoproj/argo/tree/master/examples
+* Argo Events: https://github.com/argoproj/argo-events/tree/master/examples
+* Argo Workflow: https://github.com/argoproj/argo-workflows/tree/master/examples
 
 ## License
 ```
